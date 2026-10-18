@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>ROBINEAU connection test</title>
+<style>
+  html, body, * { -webkit-tap-highlight-color: transparent !important; }
+  :focus:not(:focus-visible) { outline: none; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #fff; color: #111; }
+  main { max-width: 560px; margin: 0 auto; padding: 28px 20px 40px; }
+  h1 { font-size: 22px; letter-spacing: .08em; margin: 0 0 6px; }
+  .how { font-size: 15px; line-height: 1.5; color: #444; margin: 0 0 18px; }
+  .how span { display: block; }
+  .btns { display: flex; gap: 10px; margin: 18px 0 22px; }
+  button { flex: 1; font: inherit; font-size: 16px; padding: 14px 10px; border: 1px solid #111; background: #fff; color: #111; border-radius: 10px; cursor: pointer; }
+  button[disabled] { opacity: .45; }
+  table { width: 100%; border-collapse: collapse; font-size: 16px; }
+  td { padding: 11px 4px; border-bottom: 1px solid #eee; vertical-align: top; }
+  td.r { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .ok { color: #137a2f; font-weight: 600; }
+  .bad { color: #b3261e; font-weight: 600; }
+  .wait { color: #888; }
+  .small { font-size: 13px; color: #777; }
+  #summary { margin-top: 18px; font-size: 13px; color: #555; word-break: break-word; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ROBINEAU</h1>
+  <p class="how">
+    <span>Tap a button, wait about 30 seconds, then send us a screenshot.</span>
+    <span>Нажмите кнопку, подождите около 30 секунд и пришлите нам скриншот.</span>
+    <span>请点击下方按钮，等待约 30 秒，然后将截图发给我们。</span>
+  </p>
+  <div class="btns">
+    <button id="wifi">Wi&#8209;Fi</button>
+    <button id="mobile">Mobile data<br><span class="small">Мобильный интернет · 移动数据</span></button>
+  </div>
+  <table id="t"></table>
+  <div id="summary"></div>
+</main>
+<script>
+var TESTS = [
+  ["Cloudflare (now)", "https://www.koyeb.com/_next/static/media/01.illu.0qx0boik6qut-.webp"],
+  ["Fly", "https://module2.robineau.gallery/assets/valentina_sothebys_2026-10-10.jpg"],
+  ["GitHub Pages", "https://futurenyx.github.io/nettest/test.jpg"],
+  ["Netlify", "https://www.netlify.com/images/og-image-default.png"],
+  ["Amazon CloudFront", "https://d1.awsstatic.com/onedam/marketing-channels/website/aws/en_US/global-nav/aws-library_illustration_culture_11_1200.29c48d4e742090396f61d0c5d5eec4ea8d714817.jpg"],
+  ["Bunny", "https://bunny.net/images24/Making-the-internet-hop-faster.jpg"],
+  ["Fastly", "https://www.fastly.com/cimages/ocb1q9kflo7k/1UfTfeN01lL2r1S0c4CTrF/84a56e8b3b9e7e7f68bbeea1b99163b2/Fastly_-_Main_Meta_Image.png?width=1200"],
+  ["Vercel", "https://vercel.com/api/www/avatar?u=rauchg&s=460"]
+];
+var LIMIT = 25000;
+var t = document.getElementById('t');
+TESTS.forEach(function (x, i) {
+  var tr = document.createElement('tr');
+  tr.innerHTML = '<td>' + x[0] + '</td><td class="r wait" id="r' + i + '">&middot;</td>';
+  t.appendChild(tr);
+});
+function one(i, done) {
+  var cell = document.getElementById('r' + i), img = new Image(), t0 = performance.now(), fin = false;
+  cell.className = 'r wait'; cell.textContent = '…';
+  function end(ok, label) {
+    if (fin) return; fin = true;
+    var s = ((performance.now() - t0) / 1000).toFixed(1);
+    cell.className = 'r ' + (ok ? 'ok' : 'bad');
+    cell.textContent = ok ? '✓ ' + s + ' s' : '✗ ' + label;
+    done(TESTS[i][0] + ':' + (ok ? s : label));
+  }
+  var timer = setTimeout(function () { img.src = ''; end(false, 'stuck'); }, LIMIT);
+  img.onload = function () { clearTimeout(timer); end(true); };
+  img.onerror = function () { clearTimeout(timer); end(false, 'blocked'); };
+  img.referrerPolicy = 'no-referrer';
+  var u = TESTS[i][1];
+  img.src = u + (u.indexOf('?') < 0 ? '?' : '&') + 'nt=' + Date.now() + i;
+}
+function runAll(kind) {
+  var b1 = document.getElementById('wifi'), b2 = document.getElementById('mobile');
+  b1.disabled = b2.disabled = true;
+  var res = new Array(TESTS.length), left = TESTS.length;
+  TESTS.forEach(function (_, i) {
+    one(i, function (r) {
+      res[i] = r;
+      if (--left === 0) {
+        b1.disabled = b2.disabled = false;
+        var tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || '');
+        document.getElementById('summary').textContent =
+          kind + ' · ' + tz + ' · ' + new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC · ' + res.join(' · ');
+      }
+    });
+  });
+}
+document.getElementById('wifi').onclick = function () { runAll('Wi-Fi'); };
+document.getElementById('mobile').onclick = function () { runAll('Mobile'); };
+</script>
+</body>
+</html>
