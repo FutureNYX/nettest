@@ -50,7 +50,11 @@ var TESTS = [
   ["Amazon CloudFront", "https://d1.awsstatic.com/onedam/marketing-channels/website/aws/en_US/global-nav/aws-library_illustration_culture_11_1200.29c48d4e742090396f61d0c5d5eec4ea8d714817.jpg"],
   ["Bunny", "https://bunny.net/images24/Making-the-internet-hop-faster.jpg"],
   ["Fastly", "https://www.fastly.com/cimages/ocb1q9kflo7k/1UfTfeN01lL2r1S0c4CTrF/84a56e8b3b9e7e7f68bbeea1b99163b2/Fastly_-_Main_Meta_Image.png?width=1200"],
-  ["Vercel", "https://vercel.com/api/www/avatar?u=rauchg&s=460"]
+  ["Vercel", "https://vercel.com/api/www/avatar?u=rauchg&s=460"],
+  // Oracle: no big public picture, so send 64 KB up instead (the hyperion-cs tcp-16-20 checker's method);
+  // a capped connection freezes after ~16 KB in either direction.
+  ["Oracle (Europe)", "https://sh00065.hostgator.com/", "post"],
+  ["Oracle (Asia)", "https://ged.com.sg/", "post"]
 ];
 var LIMIT = 25000;
 var t = document.getElementById('t');
@@ -69,12 +73,21 @@ function one(i, done) {
     cell.textContent = ok ? '✓ ' + s + ' s' : '✗ ' + label;
     done(TESTS[i][0] + ':' + (ok ? s : label));
   }
+  var u = TESTS[i][1], url = u + (u.indexOf('?') < 0 ? '?' : '&') + 'nt=' + Date.now() + i;
+  if (TESTS[i][2] === 'post') {
+    var ctrl = new AbortController(), body = new Uint8Array(64 * 1024);
+    crypto.getRandomValues(body);
+    var ptimer = setTimeout(function () { ctrl.abort(); end(false, 'stuck'); }, LIMIT);
+    fetch(url, { method: 'POST', mode: 'no-cors', cache: 'no-store', referrerPolicy: 'no-referrer', body: body, signal: ctrl.signal })
+      .then(function () { clearTimeout(ptimer); end(true); })
+      ['catch'](function () { clearTimeout(ptimer); end(false, 'blocked'); });
+    return;
+  }
   var timer = setTimeout(function () { img.src = ''; end(false, 'stuck'); }, LIMIT);
   img.onload = function () { clearTimeout(timer); end(true); };
   img.onerror = function () { clearTimeout(timer); end(false, 'blocked'); };
   img.referrerPolicy = 'no-referrer';
-  var u = TESTS[i][1];
-  img.src = u + (u.indexOf('?') < 0 ? '?' : '&') + 'nt=' + Date.now() + i;
+  img.src = url;
 }
 function runAll(kind) {
   var b1 = document.getElementById('wifi'), b2 = document.getElementById('mobile');
