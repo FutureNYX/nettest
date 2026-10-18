@@ -17,12 +17,14 @@
   button { flex: 1; font: inherit; font-size: 16px; padding: 14px 10px; border: 1px solid #111; background: #fff; color: #111; border-radius: 10px; cursor: pointer; }
   button[disabled] { opacity: .45; }
   table { width: 100%; border-collapse: collapse; font-size: 16px; }
-  td { padding: 11px 4px; border-bottom: 1px solid #eee; vertical-align: top; }
+  td { padding: 9px 4px; border-bottom: 1px solid #eee; vertical-align: top; }
   td.r { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .ok { color: #137a2f; font-weight: 600; }
   .bad { color: #b3261e; font-weight: 600; }
   .wait { color: #888; }
   .small { font-size: 13px; color: #777; }
+  #status { min-height: 22px; margin: 0 0 10px; font-size: 16px; font-weight: 600; color: #888; }
+  #status.done { color: #137a2f; font-size: 18px; }
   #summary { margin-top: 18px; font-size: 13px; color: #555; word-break: break-word; }
 </style>
 </head>
@@ -30,14 +32,15 @@
 <main>
   <h1>ROBINEAU</h1>
   <p class="how">
-    <span>Turn off any VPN, tap a button, wait about 30 seconds, then send us a screenshot.</span>
-    <span>Выключите VPN, нажмите кнопку, подождите около 30 секунд и пришлите нам скриншот.</span>
-    <span>请先关闭 VPN，再点击下方按钮，等待约 30 秒，然后将截图发给我们。</span>
+    <span>Turn off any VPN, tap a button, wait until it says Done, then send us a screenshot.</span>
+    <span>Выключите VPN, нажмите кнопку, дождитесь надписи «Готово» и пришлите нам скриншот.</span>
+    <span>请先关闭 VPN，再点击下方按钮，等到显示“完成”后，将截图发给我们。</span>
   </p>
   <div class="btns">
     <button id="wifi">Wi&#8209;Fi</button>
     <button id="mobile">Mobile data<br><span class="small">Мобильный интернет · 移动数据</span></button>
   </div>
+  <div id="status"></div>
   <table id="t"></table>
   <div id="summary"></div>
 </main>
@@ -93,11 +96,22 @@ function runAll(kind) {
   var b1 = document.getElementById('wifi'), b2 = document.getElementById('mobile');
   b1.disabled = b2.disabled = true;
   var res = new Array(TESTS.length), left = TESTS.length;
+  var st = document.getElementById('status'), t1 = Date.now();
+  st.className = '';
+  function tick() {
+    var n = Math.max(0, Math.ceil((LIMIT - (Date.now() - t1)) / 1000));
+    st.textContent = 'Testing… ' + n + ' s · Идет проверка… ' + n + ' с · 测试中… ' + n + ' 秒';
+  }
+  tick();
+  var iv = setInterval(tick, 500);
   TESTS.forEach(function (_, i) {
     one(i, function (r) {
       res[i] = r;
       if (--left === 0) {
         b1.disabled = b2.disabled = false;
+        clearInterval(iv);
+        st.className = 'done';
+        st.textContent = '✓ Done: screenshot now · Готово: сделайте скриншот · 完成，请截图';
         var tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || '');
         document.getElementById('summary').textContent =
           kind + ' · ' + tz + ' · ' + new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC · ' + res.join(' · ');
